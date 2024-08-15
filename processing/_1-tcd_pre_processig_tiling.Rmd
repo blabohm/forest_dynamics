@@ -5,18 +5,28 @@ date: "`r Sys.Date()`"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
+# Pre-processing
+## Cut the large TCD data sets into 100x100km tiles to prepare the data for later parallel processing
+
+```{r setup, eval=FALSE}
+# Load packages
+library(dplyr)
+library(terra)
+library(sf)
 # Use github directory as working directory
 working_directory <- "D:/github/forest_dynamics/"
 data_directory <- paste0(working_directory, "data/")
-source(paste0(github_dir, "processing/2_tcd_processing_Step_1_and_2_general_funs.R"))
-source(paste0(github_dir, "processing/2_tcd_processing_Step_1_funs.R"))
+source(paste0(working_directory,
+              "processing/2_tcd_processing_Step_1_and_2_general_funs.R"))
+# TCD raw directories (download data from: https://land.copernicus.eu/en/products/high-resolution-layer-tree-cover-density:
+tcd12_directory <- "~/TCD_2012_020m_eu_03035_d03_full.tif"
+tcd18_directory <- "~/DATA/TCD_2018_010m_eu_03035_V2_0.tif"
 
 ```
 
 
+```{r reference grid, eval=FALSE}
 
-```{r}
 # Using the INSPIRE reference grid
 ref_tif <- paste0(data_directory, "inspire_grid.tif")
 ref_rst <- rast(ref_tif)
@@ -25,25 +35,32 @@ ref_rst[ref_rst < 1] <- NA
 # Template sf object for intersecting data
 tmp_sf <- terra::as.polygons(ref_rst, dissolve = TRUE) %>% 
   st_as_sf()
+
 ```
 
 
+```{r no data grid, eval=FALSE}
 
-```{r}
 # create a grid covering Europe land masses
 no_data_grid <- ref_rst %>%   
   st_make_grid(., cellsize = 1e5) %>%
   st_as_sf() %>% 
   sf::st_filter(tmp_sf, .pred = st_intersects)
+
 ```
 
-```{r}
+
+```{r raster input, eval=FALSE}
+
 # Input TCD data
 tcd12_raw <- rast(tcd12_directory)
 tcd18_raw <- rast(tcd18_directory)
+
 ```
 
-```{r}
+
+```{r tiling, eval=FALSE}
+
 # Splitting large raster into smaller pieces
 # per tile: read data from large raster and write to file
 # (make large raster serializeable)
@@ -62,7 +79,9 @@ for (i in 1:nrow(nd_grid)) {
 
 ```
 
-```{r}
+
+```{r no data mask, eval=FALSE}
+
 # Create the no-data raster for later masking
 tcd12_list <- list.files(paste0(data_dir, "tcd_2012_tiles/"), 
                          full.names = TRUE, pattern = ".tif$")
@@ -76,7 +95,8 @@ data_list <- data_df %>%
 
 # Aggregating raster
 no_data_tiling <- function(data_vector){
-  #INPUT
+  
+  # Input
   data_dir <- "Z:/ch/data/"  
   i <- strsplit(data_vector$tcd12, "2012_")[[1]] %>% 
     last() %>% 
@@ -85,7 +105,7 @@ no_data_tiling <- function(data_vector){
   tcd12 <- rast(data_vector$tcd12) * 1
   tcd18 <- aggregate(rast(data_vector$tcd18), fact = 2, fun = max)
   
-  #PROCESSING
+  # Processing
   tcd12[tcd12 < 101] <- 0 
   tcd12[tcd12 > 100] <- 1 
   tcd18[tcd18 < 101] <- 0 
@@ -94,16 +114,16 @@ no_data_tiling <- function(data_vector){
   nd[nd >= 1] <- 1
   nd <- aggregate(nd, fact = 50, fun = max)
   
-  #OUTPUT
+  # Output
   out_dir <- paste0(data_dir, "no_data_tiles_1km/")
   raster_out(raster = nd, directory = out_dir,
              string = "no_data_1km_", i = i, dtype = "LOG1S")
-  #CLEAN UP
+  # Clean up ram
   clean_up(environment())
   
 }
+
 # Parallel execution
 par_exec(data_list, no_data_tiling)
-
 
 ```
