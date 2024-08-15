@@ -9,7 +9,7 @@ output: html_document
 # 1. Aggregate forest condition inside stable forest
 # 2. Calculate forest area
 # 3. Calculate sensitivity layers
-# 4. Assemble data sets
+# 4. Assemble and mask data sets
 # NOTE: This script will execute a process in parallel on 60% of the available computational cores. This might render the machine useless for other tasks at the same time.
 
 ## Setup
@@ -26,7 +26,7 @@ source(paste0(working_directory,
               "processing/2_tcd_processing_Step_1_funs.R"))
 
 # List input files for 2012 and 2018 and gather them in a list
-data_df <- mkDatDf(data_dir)
+data_df <- mkDatDf(data_directory)
 data_list <- split(data_df, data_df$n)
 
 ```
@@ -35,7 +35,7 @@ data_list <- split(data_df, data_df$n)
 ```{r Forest condition, eval=FALSE}
 
 # Execute forest condition change calculation
-to_do <- find_missing(paste0(data_dir, "TCD12_stable_forest/"),
+to_do <- find_missing(paste0(data_directory, "TCD12_stable_forest/"),
                       nrow(data_df))
 if (!is.null(to_do)) data_list <- data_df[to_do,] %>% split(., .$n)
 
@@ -49,7 +49,7 @@ par_exec(data_list,
 ```{r Forest area, eval=FALSE}
 
 # Execute forest area change calculation
-to_do <- find_missing(paste0(data_dir, "TCA12/"), 
+to_do <- find_missing(paste0(data_directory, "TCA12/"), 
                       nrow(data_df))
 if (!is.null(to_do)) data_list <- data_df[to_do,] %>% split(., .$n)
 
@@ -63,7 +63,7 @@ par_exec(data_list,
 ```{r Sensitivity layers, eval=FALSE}
 
 #Execute sensitivity layer calculation
-to_do <- find_missing(paste0(data_dir, "na12/"), 
+to_do <- find_missing(paste0(data_directory, "na12/"), 
                       nrow(data_df))
 if (!is.null(to_do)) data_list <- data_df[to_do,] %>% split(., .$n)
 
@@ -74,10 +74,29 @@ par_exec(data_list,
 ```
 
 
-4. Assemble
-```{r Assemble data sets, eval=FALSE}
+4. Assemble and mask
+```{r Assemble and mask data sets, eval=FALSE}
 
+# List output of parallel processing
+tile_dirs <- list.dirs(data_directory, recursive = FALSE) %>%
+  .[grepl("tile", .)]
 
+no_data_mask <- rast(paste0(data_directory, ""))
+
+# Put individual tiles in a vrt and write them to file
+for (t_dir in tile_dirs) {
+  
+  out_vrt <- list.files(t_dir, full.names = TRUE,
+                        pattern = ".tif$") %>%
+    vrt() 
+  
+  out_vrt_masked <- mask(out_rst, 
+                         no_data_mask,
+                         maskvalue = 1,
+                         updatevalue = 255)
+  
+  writeRaster(out_vrt_masked, paste0(t_dir, ".tif"))
+}
 
 ```
 

@@ -10,9 +10,8 @@
 # TCD change in stable forest aggregated to 1000 m ------------------------
 
 tcd_change_stable_forest <- function(data_vector,
-                                     ch_dir = "Z:/ch/",
-                                     data_dir = paste0(ch_dir, "data/"),
-                                     github_dir = "D:/github/clearing_house/")
+                                     data_dir = data_vector$data_dir,
+                                     github_dir = data_vector$github_dir)
 {
 
   # FOR PARALLEL PROCESSING:
@@ -64,9 +63,8 @@ tcd_change_stable_forest <- function(data_vector,
 # TCA change aggregated to 1000 m -----------------------------------------
 
 tca_change <- function(data_vector,
-                       ch_dir = "Z:/ch/",
-                       data_dir = paste0(ch_dir, "data/"),
-                       github_dir = "D:/github/clearing_house/")
+                       data_dir = data_vector$data_dir,
+                       github_dir = data_vector$github_dir)
 {
 
   # For parallel processing
@@ -96,9 +94,8 @@ tca_change <- function(data_vector,
 # Generate sensitivity layers ---------------------------------------------
 
 sensitivity_lyrs <- function(data_vector,
-                        ch_dir = "Z:/ch/",
-                        data_dir = "D:/LandOeko/ch/data/",
-                        github_dir = "D:/github/clearing_house/")
+                             data_dir = data_vector$data_dir,
+                             github_dir = data_vector$github_dir)
 {
 
   # For parallel processing
